@@ -23,6 +23,9 @@
       padding: 20px;
       box-sizing: border-box;
       background: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
 
     h2 {
@@ -35,6 +38,7 @@
       list-style: none;
       padding: 0;
       margin: 0;
+      flex: 1;
     }
 
     .hours li {
@@ -44,19 +48,30 @@
       border-bottom: 1px solid #eee;
     }
 
-    .status {
-      margin-top: 20px;
-      text-align: center;
-      font-size: 18px;
+    .today.open {
+      color: #2e8b57; /* Vert quand ouvert */
       font-weight: bold;
     }
 
-    .open {
-      color: #607085;
+    .today.closed {
+      color: #c0392b; /* Rouge quand fermé */
+      font-weight: bold;
     }
 
-    .closed {
-      color: #172042;
+    .status {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .status.open {
+      color: #2e8b57;
+    }
+
+    .status.closed {
+      color: #c0392b;
     }
   </style>
 </head>
@@ -70,7 +85,6 @@
   </div>
 
   <script>
-    // Lien CSV de ton Google Sheet, intégré
     const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_lB-xqc8azKUcUUi6eQm-CvGoQzdxfnzW9hrN9oySai_zo3eTxEjjVYc_NhQ8P8mNTTULnymjN53W/pub?output=csv";
 
     async function fetchHours() {
@@ -84,16 +98,18 @@
 
         const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long' }).toLowerCase();
         let openNow = false;
+        let todayStatus = "closed";
 
         rows.forEach(row => {
-          const day = row[0];
+          const day = row[0].charAt(0).toUpperCase() + row[0].slice(1); // majuscule
           const hours = row[1] || "Fermé";
 
           const li = document.createElement("li");
           li.innerHTML = `<span>${day}</span><span>${hours}</span>`;
-          list.appendChild(li);
 
-          if (day.toLowerCase() === today) {
+          if (row[0].toLowerCase() === today) {
+            li.classList.add("today");
+
             if (hours.toLowerCase() !== "fermé") {
               const [open, close] = hours.split("-").map(h => h.trim());
               const now = new Date();
@@ -107,9 +123,17 @@
 
               if (now >= openTime && now <= closeTime) {
                 openNow = true;
+                todayStatus = "open";
+              } else {
+                todayStatus = "closed";
               }
+            } else {
+              todayStatus = "closed";
             }
+            li.classList.add(todayStatus);
           }
+
+          list.appendChild(li);
         });
 
         const statusDiv = document.getElementById("status");

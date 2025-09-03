@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Widget Horaires</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Open+Sans&display=swap');
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Open Sans', sans-serif;
+      font-size: 16px;
+      color: #172042;
+    }
+
+    .widget {
+      width: 430px;
+      height: 360px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      padding: 20px;
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    h2 {
+      margin: 0 0 15px;
+      font-size: 20px;
+      text-align: center;
+    }
+
+    .hours {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .hours li {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .status {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .open {
+      color: #607085;
+    }
+
+    .closed {
+      color: #172042;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <h2>Horaires d’ouverture</h2>
+    <ul id="hours-list" class="hours">
+      <li>Chargement...</li>
+    </ul>
+    <div id="status" class="status">—</div>
+  </div>
+
+  <script>
+    // Lien CSV de ton Google Sheet, intégré
+    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_lB-xqc8azKUcUUi6eQm-CvGoQzdxfnzW9hrN9oySai_zo3eTxEjjVYc_NhQ8P8mNTTULnymjN53W/pub?output=csv";
+
+    async function fetchHours() {
+      try {
+        const response = await fetch(sheetURL);
+        const data = await response.text();
+
+        const rows = data.trim().split("\n").map(r => r.split(","));
+        const list = document.getElementById("hours-list");
+        list.innerHTML = "";
+
+        const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long' }).toLowerCase();
+        let openNow = false;
+
+        rows.forEach(row => {
+          const day = row[0];
+          const hours = row[1] || "Fermé";
+
+          const li = document.createElement("li");
+          li.innerHTML = `<span>${day}</span><span>${hours}</span>`;
+          list.appendChild(li);
+
+          if (day.toLowerCase() === today) {
+            if (hours.toLowerCase() !== "fermé") {
+              const [open, close] = hours.split("-").map(h => h.trim());
+              const now = new Date();
+              const [oh, om] = open.split(":").map(Number);
+              const [ch, cm] = close.split(":").map(Number);
+
+              const openTime = new Date();
+              openTime.setHours(oh, om, 0);
+              const closeTime = new Date();
+              closeTime.setHours(ch, cm, 0);
+
+              if (now >= openTime && now <= closeTime) {
+                openNow = true;
+              }
+            }
+          }
+        });
+
+        const statusDiv = document.getElementById("status");
+        if (openNow) {
+          statusDiv.textContent = "✅ Actuellement ouvert";
+          statusDiv.className = "status open";
+        } else {
+          statusDiv.textContent = "❌ Actuellement fermé";
+          statusDiv.className = "status closed";
+        }
+      } catch (err) {
+        console.error("Erreur de chargement des horaires :", err);
+        document.getElementById("hours-list").innerHTML = "<li>Erreur de chargement</li>";
+        document.getElementById("status").textContent = "";
+      }
+    }
+
+    fetchHours();
+  </script>
+</body>
+</html>

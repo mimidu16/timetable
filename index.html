@@ -13,13 +13,13 @@
       justify-content: center;
       align-items: flex-start;
       margin: 40px;
+      background: #f5f7fb;
     }
     .widget {
       width: 430px;
       height: 360px;
       background: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      border: 1px solid #e0e0e0; /* petit contour gris */
       padding: 20px;
       box-sizing: border-box;
     }
@@ -44,10 +44,10 @@
       font-weight: 600;
     }
     .open {
-      color: #607085; /* vert/gris quand ouvert */
+      color: #607085;
     }
     .closed {
-      color: #172042; /* sombre quand fermé */
+      color: #172042;
     }
     .highlight-open {
       color: green;
@@ -86,7 +86,7 @@
     fetch(sheetUrl)
       .then(res => res.text())
       .then(csv => {
-        const rows = csv.split("\n").slice(1); // sauter l'en-tête
+        const rows = csv.split("\n").slice(1);
         const scheduleTable = document.getElementById("schedule");
         const now = new Date();
         const today = days[now.getDay()];
@@ -108,7 +108,6 @@
           let tdHours = document.createElement("td");
           tdHours.textContent = hours;
 
-          // Vérif si jour actuel
           if (day.toUpperCase() === today) {
             if (hours.toLowerCase() !== "fermé") {
               let [open, close] = hours.split("-").map(h => h.trim());

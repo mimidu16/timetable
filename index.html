@@ -2,154 +2,149 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Widget Horaires</title>
+  <title>Horaires d'ouverture</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Open+Sans&display=swap');
 
     body {
-      margin: 0;
-      padding: 0;
       font-family: 'Open Sans', sans-serif;
       font-size: 16px;
-      color: #172042;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      margin: 40px;
     }
-
     .widget {
       width: 430px;
-      height: 330px; /* réduit car le statut sort du cadre */
-      border: 1px solid #ccc;
+      height: 360px;
+      background: white;
       border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
       padding: 20px;
       box-sizing: border-box;
-      background: #fff;
-      display: flex;
-      flex-direction: column;
     }
-
-    h2 {
-      margin: 0 0 15px;
-      font-size: 20px;
+    .widget h2 {
       text-align: center;
+      margin-bottom: 15px;
+      color: #172042;
     }
-
-    .hours {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      flex: 1;
+    table {
+      width: 100%;
+      border-collapse: collapse;
     }
-
-    .hours li {
+    tr {
       display: flex;
       justify-content: space-between;
-      padding: 6px 0;
-      border-bottom: 1px solid #eee;
+      padding: 4px 0;
     }
-
-    .today.open {
-      color: #2e8b57; /* Vert quand ouvert */
+    td {
+      flex: 1;
+    }
+    .day {
+      font-weight: 600;
+    }
+    .open {
+      color: #607085; /* vert/gris quand ouvert */
+    }
+    .closed {
+      color: #172042; /* sombre quand fermé */
+    }
+    .highlight-open {
+      color: green;
       font-weight: bold;
     }
-
-    .today.closed {
-      color: #c0392b; /* Rouge quand fermé */
+    .highlight-closed {
+      color: red;
       font-weight: bold;
     }
-
     .status {
-      margin-top: 8px;
       text-align: center;
       font-size: 12px;
-      font-weight: normal;
+      margin-top: 10px;
     }
-
     .status.open {
-      color: #2e8b57;
+      color: green;
     }
-
     .status.closed {
-      color: #c0392b;
+      color: red;
     }
   </style>
 </head>
 <body>
-  <div class="widget">
-    <h2>Horaires d’ouverture</h2>
-    <ul id="hours-list" class="hours">
-      <li>Chargement...</li>
-    </ul>
+  <div>
+    <div class="widget">
+      <h2>Horaires d’ouverture</h2>
+      <table id="schedule"></table>
+    </div>
+    <div id="status" class="status"></div>
   </div>
-  <div id="status" class="status">—</div>
 
   <script>
-    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_lB-xqc8azKUcUUi6eQm-CvGoQzdxfnzW9hrN9oySai_zo3eTxEjjVYc_NhQ8P8mNTTULnymjN53W/pub?output=csv";
+    const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_lB-xqc8azKUcUUi6eQm-CvGoQzdxfnzW9hrN9oySai_zo3eTxEjjVYc_NhQ8P8mNTTULnymjN53W/pub?output=csv";
+    const days = ["DIMANCHE","LUNDI","MARDI","MERCREDI","JEUDI","VENDREDI","SAMEDI"];
 
-    async function fetchHours() {
-      try {
-        const response = await fetch(sheetURL);
-        const data = await response.text();
-
-        const rows = data.trim().split("\n").map(r => r.split(","));
-        const list = document.getElementById("hours-list");
-        list.innerHTML = "";
-
-        const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long' }).toLowerCase();
-        let openNow = false;
-        let todayStatus = "closed";
+    fetch(sheetUrl)
+      .then(res => res.text())
+      .then(csv => {
+        const rows = csv.split("\n").slice(1); // sauter l'en-tête
+        const scheduleTable = document.getElementById("schedule");
+        const now = new Date();
+        const today = days[now.getDay()];
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        let isOpen = false;
 
         rows.forEach(row => {
-          const day = row[0].charAt(0).toUpperCase() + row[0].slice(1); // majuscule
-          const hours = row[1] || "Fermé";
+          const cols = row.split(",");
+          const day = cols[0]?.trim();
+          const hours = cols[1]?.trim();
 
-          const li = document.createElement("li");
-          li.innerHTML = `<span>${day}</span><span>${hours}</span>`;
+          if (!day) return;
 
-          if (row[0].toLowerCase() === today) {
-            li.classList.add("today");
+          let tr = document.createElement("tr");
+          let tdDay = document.createElement("td");
+          tdDay.textContent = day.charAt(0).toUpperCase() + day.slice(1);
+          tdDay.classList.add("day");
 
+          let tdHours = document.createElement("td");
+          tdHours.textContent = hours;
+
+          // Vérif si jour actuel
+          if (day.toUpperCase() === today) {
             if (hours.toLowerCase() !== "fermé") {
-              const [open, close] = hours.split("-").map(h => h.trim());
-              const now = new Date();
-              const [oh, om] = open.split(":").map(Number);
-              const [ch, cm] = close.split(":").map(Number);
+              let [open, close] = hours.split("-").map(h => h.trim());
+              let [openH, openM] = open.split(":").map(Number);
+              let [closeH, closeM] = close.split(":").map(Number);
+              let openMinutes = openH * 60 + openM;
+              let closeMinutes = closeH * 60 + closeM;
 
-              const openTime = new Date();
-              openTime.setHours(oh, om, 0);
-              const closeTime = new Date();
-              closeTime.setHours(ch, cm, 0);
-
-              if (now >= openTime && now <= closeTime) {
-                openNow = true;
-                todayStatus = "open";
+              if (currentTime >= openMinutes && currentTime <= closeMinutes) {
+                tdDay.classList.add("highlight-open");
+                tdHours.classList.add("highlight-open");
+                isOpen = true;
               } else {
-                todayStatus = "closed";
+                tdDay.classList.add("highlight-closed");
+                tdHours.classList.add("highlight-closed");
               }
             } else {
-              todayStatus = "closed";
+              tdDay.classList.add("highlight-closed");
+              tdHours.classList.add("highlight-closed");
             }
-            li.classList.add(todayStatus);
           }
 
-          list.appendChild(li);
+          tr.appendChild(tdDay);
+          tr.appendChild(tdHours);
+          scheduleTable.appendChild(tr);
         });
 
-        const statusDiv = document.getElementById("status");
-        if (openNow) {
-          statusDiv.textContent = "Actuellement ouvert";
-          statusDiv.className = "status open";
+        const status = document.getElementById("status");
+        if (isOpen) {
+          status.textContent = "Actuellement ouvert";
+          status.classList.add("open");
         } else {
-          statusDiv.textContent = "Actuellement fermé";
-          statusDiv.className = "status closed";
+          status.textContent = "Actuellement fermé";
+          status.classList.add("closed");
         }
-      } catch (err) {
-        console.error("Erreur de chargement des horaires :", err);
-        document.getElementById("hours-list").innerHTML = "<li>Erreur de chargement</li>";
-        document.getElementById("status").textContent = "";
-      }
-    }
-
-    fetchHours();
+      });
   </script>
 </body>
 </html>
